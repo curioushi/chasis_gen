@@ -37,8 +37,8 @@ for obj in [chasis, steer_left_front, steer_left_back, steer_right_front, steer_
     obj_name = obj.GetName()
     SetRigidBodyCommand(obj_path).do()
     ApplyAPISchemaCommand(UsdPhysics.MassAPI, obj).do()
-    mesh = stage.GetPrimAtPath(obj_path.AppendPath(obj_name + '_mesh'))
-    mesh.GetAttribute('physics:approximation').Set('none')
+    # mesh = stage.GetPrimAtPath(obj_path.AppendPath(obj_name + '_mesh'))
+    # mesh.GetAttribute('physics:approximation').Set('none')
 
 chasis.GetProperty('physics:mass').Set(40)
 for steer in [steer_left_front, steer_left_back, steer_right_front, steer_right_back]:

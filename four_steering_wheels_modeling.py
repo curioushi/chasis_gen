@@ -43,11 +43,11 @@ def bevel(obj, offset):
 
 def create_wheel(name, diameter, thickness, location, padding=0.01):
     """Create a wheel object"""
-    wheel = bproc.object.create_primitive('CYLINDER', vertices=360, radius=diameter/2, depth=thickness, location=location)
+    wheel = bproc.object.create_primitive('CYLINDER', vertices=36, radius=diameter/2, depth=thickness, location=location)
     bpy.ops.transform.rotate(value=math.pi / 2, orient_axis='X')
     wheel.blender_obj.name = name
     wheel.blender_obj.data.name = name + '_mesh'
-    wheel_bound = bproc.object.create_primitive('CYLINDER', vertices=360, radius=padding+math.hypot(diameter/2, thickness/2), depth=padding+diameter, location=location)
+    wheel_bound = bproc.object.create_primitive('CYLINDER', vertices=36, radius=padding+math.hypot(diameter/2, thickness/2), depth=padding+diameter, location=location)
     return wheel, wheel_bound
 
 def create_axis(name, location):
@@ -145,16 +145,16 @@ def main():
     steer3.add_material(steer_mat)
     steer4.add_material(steer_mat)
 
-    bevel(wheel1.blender_obj, wheel_bevel)
-    bevel(wheel2.blender_obj, wheel_bevel)
-    bevel(wheel3.blender_obj, wheel_bevel)
-    bevel(wheel4.blender_obj, wheel_bevel)
+    # bevel(wheel1.blender_obj, wheel_bevel)
+    # bevel(wheel2.blender_obj, wheel_bevel)
+    # bevel(wheel3.blender_obj, wheel_bevel)
+    # bevel(wheel4.blender_obj, wheel_bevel)
 
     # unknown bug: UNION <-> DIFFERENCE
-    boolean_modify(wheel1.blender_obj, steer1.blender_obj, 'UNION')
-    boolean_modify(wheel2.blender_obj, steer2.blender_obj, 'UNION')
-    boolean_modify(wheel3.blender_obj, steer3.blender_obj, 'UNION')
-    boolean_modify(wheel4.blender_obj, steer4.blender_obj, 'UNION')
+    # boolean_modify(wheel1.blender_obj, steer1.blender_obj, 'UNION')
+    # boolean_modify(wheel2.blender_obj, steer2.blender_obj, 'UNION')
+    # boolean_modify(wheel3.blender_obj, steer3.blender_obj, 'UNION')
+    # boolean_modify(wheel4.blender_obj, steer4.blender_obj, 'UNION')
 
     steer1_bound.delete(True)
     steer2_bound.delete(True)
