@@ -3,7 +3,7 @@ wheel_diameter: 0.200
 wheel_thickness: 0.060 
 wheel_base_x: 0.490 
 wheel_base_y: 0.370 
+wheel_bevel: 0.015
 chasis_width: 0.5 
 chasis_length: 0.738 
-chasis_height: 0.233 
-chasis_z_offset: 0.107 
+chasis_height: 0.140 
