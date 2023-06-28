@@ -46,7 +46,7 @@ def create_wheel(name, diameter, thickness, location, padding=0.01):
     wheel = bproc.object.create_primitive('CYLINDER', vertices=36, radius=diameter/2, depth=thickness, location=location)
     bpy.ops.transform.rotate(value=math.pi / 2, orient_axis='X')
     wheel.blender_obj.name = name
-    wheel.blender_obj.data.name = name + '_mesh'
+    wheel.blender_obj.data.name = name + "_mesh"
     wheel_bound = bproc.object.create_primitive('CYLINDER', vertices=36, radius=padding+math.hypot(diameter/2, thickness/2), depth=padding+diameter, location=location)
     return wheel, wheel_bound
 
@@ -82,7 +82,6 @@ def main():
         wheel_thickness = 0.060 # m
         wheel_base_x = 0.490 # m
         wheel_base_y = 0.370 # m
-        wheel_bevel = 0.01 # m
         chasis_width = 0.5 # m
         chasis_length = 0.738 # m
         chasis_height = 0.140 # m
@@ -95,7 +94,6 @@ def main():
             wheel_thickness = config['wheel_thickness']
             wheel_base_x = config['wheel_base_x']
             wheel_base_y = config['wheel_base_y']
-            wheel_bevel = config['wheel_bevel']
             chasis_width = config['chasis_width']
             chasis_length = config['chasis_length']
             chasis_height = config['chasis_height']
@@ -106,7 +104,6 @@ def main():
     print('wheel_thickness: ' + str(wheel_thickness))
     print('wheel_base_x: ' + str(wheel_base_x))
     print('wheel_base_y: ' + str(wheel_base_y))
-    print('wheel_bevel: ' + str(wheel_bevel))
     print('chasis_width: ' + str(chasis_width))
     print('chasis_length: ' + str(chasis_length))
     print('chasis_height: ' + str(chasis_height))

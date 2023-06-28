@@ -4,7 +4,9 @@ import numpy as np
 simulation_app = SimulationApp({"headless": False})
 
 import omni
-from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Sdf
+import omni.kit
+from pxr import Usd, UsdGeom, UsdPhysics, PhysxSchema, Sdf, Gf
+import omni.graph.core as og
 from omni.isaac.core import World
 from omni.isaac.core.utils.stage import open_stage
 from omni.physxcommands import SetRigidBodyCommand, CreateJointCommand
@@ -56,7 +58,8 @@ def create_steer_joint(name, parent, child):
     UsdPhysics.DriveAPI.Apply(joint, UsdPhysics.Tokens.angular)
     joint.GetProperty('drive:angular:physics:type').Set('acceleration')
     joint.GetProperty('drive:angular:physics:stiffness').Set(350)
-    joint.GetProperty('drive:angular:physics:damping').Set(100)
+    joint.GetProperty('drive:angular:physics:damping').Set(20)
+    joint.CreateAttribute('drive:angular:physics:targetPosition', Sdf.ValueTypeNames.Float).Set(0)
     PhysxSchema.JointStateAPI.Apply(joint.GetPrim(), "angular")
     return joint
 
@@ -74,9 +77,9 @@ def create_wheel_joint(name, parent, child):
     joint = stage.GetPrimAtPath(joints.GetPath().AppendPath(name))
     UsdPhysics.DriveAPI.Apply(joint, UsdPhysics.Tokens.angular)
     joint.GetProperty('drive:angular:physics:type').Set('acceleration')
-    joint.GetProperty('drive:angular:physics:damping').Set(1)
-    joint.GetProperty('drive:angular:physics:stiffness').Set(20)
-    joint.CreateAttribute('physxJoint:maxJointVelocity', Sdf.ValueTypeNames.Float).Set(10)
+    joint.GetProperty('drive:angular:physics:damping').Set(10)
+    # joint.CreateAttribute('physxJoint:maxJointVelocity', Sdf.ValueTypeNames.Float).Set(10)
+    joint.CreateAttribute('drive:angular:physics:targetVelocity', Sdf.ValueTypeNames.Float).Set(0)
     PhysxSchema.JointStateAPI.Apply(joint.GetPrim(), "angular")
     return joint
 
@@ -91,7 +94,76 @@ robot.GetAttribute('physxArticulation:enabledSelfCollisions').Set(False)
 
 MovePrimCommand(material.GetPath(), robot.GetPath().AppendPath('_materials')).do()
 
+# set up physics material
+wheel_mat_path = robot.GetPath().AppendPath('wheel_material')
+omni.kit.commands.execute("AddRigidBodyMaterialCommand", stage=stage, path=str(wheel_mat_path))
+wheel_mat = stage.GetPrimAtPath(wheel_mat_path)
+wheel_mat.GetAttribute('physics:dynamicFriction').Set(1)
+wheel_mat.GetAttribute('physics:staticFriction').Set(1)
+
+for wheel, wheel_name in zip([wheel_left_front, wheel_left_back, wheel_right_front, wheel_right_back],
+                 ['wheel_left_front', 'wheel_left_back', 'wheel_right_front', 'wheel_right_back']):
+    wheel_mesh = stage.GetPrimAtPath(wheel.GetPath().AppendPath(wheel_name + '_mesh'))
+    rel = wheel_mesh.CreateRelationship('material:binding:physics', False)
+    rel.SetTargets([str(wheel_mat_path)])
+
 stage.Export('RangerMini2_physics.usda')
 
-while True:
+robot.GetAttribute('xformOp:translate').Set((0, 0, 0.5))
+# robot.GetAttribute('xformOp:orient').Set(Gf.Quatf(0, 1, 0, 0))
+
+class PIDController:
+    def __init__(self, kp, ki, kd):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.last_error = 0
+        self.integral = 0
+
+    def step(self, error, dt):
+        self.integral += error * dt
+        derivative = (error - self.last_error) / dt
+        self.last_error = error
+        return self.kp * error + self.ki * self.integral + self.kd * derivative
+
+class ModDerivative:
+    def __init__(self, mod):
+        self.last_value = 0
+        self.mod = mod
+
+    def step(self, value, dt):
+        diff = value - self.last_value
+        self.last_value = value
+        diff = diff % self.mod
+        if diff > self.mod / 2:
+            diff -= self.mod
+        return diff / dt
+
+wheel_speed_controllers = [PIDController(0, 1, 0) for _ in range(4)]
+wheel_speed_measurers = [ModDerivative(360) for _ in range(4)]
+global_time = 0
+
+def on_physics_step(step_size):
+    global global_time
+    global_time += step_size
+    target_speed = 360
+    wheel_joints = [joint_wheel_left_front, joint_wheel_left_back, joint_wheel_right_front, joint_wheel_right_back]
+    for wheel_joint, wheel_speed_controller, wheel_speed_measurer in zip(wheel_joints, wheel_speed_controllers, wheel_speed_measurers):
+        encoder_reading = wheel_joint.GetAttribute('state:angular:physics:position').Get()
+        measure_speed = wheel_speed_measurer.step(encoder_reading, step_size)
+        error = target_speed - measure_speed
+        actuator = wheel_speed_controller.step(error, step_size)
+        wheel_joint.GetAttribute('drive:angular:physics:targetVelocity').Set(actuator)
+    
+    steer_joints = [joint_steer_left_front, joint_steer_right_front]
+    for steer_joint in steer_joints:
+        if (global_time // 2) % 2 == 0:
+            steer_joint.GetAttribute('drive:angular:physics:targetPosition').Set(20)
+        else:
+            steer_joint.GetAttribute('drive:angular:physics:targetPosition').Set(-20)
+
+world.add_physics_callback('controller', callback_fn=on_physics_step)
+world.reset()
+
+while simulation_app.is_running():
     world.step(render=True)
