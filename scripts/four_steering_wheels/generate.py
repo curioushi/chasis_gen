@@ -21,17 +21,17 @@ output_usd = os.path.join(output_dir, f'{chasis_name}.usda')
 
 # modeling
 print('Modeling...')
-subprocess.Popen(["blenderproc", "run", "four_steering_wheels_modeling.py", "--", "-o", temp_usd, "-c", args.config]).wait()
+subprocess.Popen(["blenderproc", "run", "scripts/four_steering_wheels/modeling.py", "--", "-o", temp_usd, "-c", args.config]).wait()
 print('Modeling done')
 
 # fix usd problems
 print('Fixing usd problems...')
-subprocess.Popen(["python", "four_steering_wheels_fix.py", temp_usd, temp_usd]).wait()
+subprocess.Popen(["python", "scripts/fix_usd.py", temp_usd, temp_usd]).wait()
 print('Fixing usd problems done')
 
 # setup physics
 print('Setting up physics...')
-subprocess.Popen([args.python_isaac, "four_steering_wheels_set_physics.py", temp_usd, output_usd, "-c", args.config]).wait()
+subprocess.Popen([args.python_isaac, "scripts/four_steering_wheels/set_physics.py", temp_usd, output_usd, "-c", args.config]).wait()
 print('Setting up physics done')
 
 # clean up
