@@ -1,19 +1,19 @@
 chasis_name: NileSR
 
 # modeling
-wheel_diameter: 0.200 
-wheel_thickness: 0.060 
-wheel_base_x: 0.490 
-wheel_base_y: 0.370 
-chasis_width: 0.5 
-chasis_length: 0.738 
-chasis_height: 0.140 
+wheel_diameter: 0.150
+wheel_thickness: 0.040
+wheel_base_x: 1.010
+wheel_base_y: 0.710
+chasis_width: 0.990
+chasis_length: 1.340
+chasis_height: 0.850
 
 # physics
-chasis_mass: 40
-steer_mass: 1
+chasis_mass: 1000
+steer_mass: 25
 steer_stiffness: 350
 steer_damping: 20
-wheel_mass: 2
+wheel_mass: 50
 wheel_damping: 10
 wheel_friction: 1

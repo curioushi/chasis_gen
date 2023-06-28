@@ -1,19 +1,19 @@
 chasis_name: NileDR
 
 # modeling
-wheel_diameter: 0.200 
-wheel_thickness: 0.060 
-wheel_base_x: 0.490 
-wheel_base_y: 0.370 
-chasis_width: 0.5 
-chasis_length: 0.738 
-chasis_height: 0.140 
+wheel_diameter: 0.230
+wheel_thickness: 0.065
+wheel_base_x: 1.000
+wheel_base_y: 1.470
+chasis_width: 1.830
+chasis_length: 1.350
+chasis_height: 0.770
 
 # physics
-chasis_mass: 40
-steer_mass: 1
+chasis_mass: 1400
+steer_mass: 50
 steer_stiffness: 350
 steer_damping: 20
-wheel_mass: 2
+wheel_mass: 100
 wheel_damping: 10
 wheel_friction: 1
