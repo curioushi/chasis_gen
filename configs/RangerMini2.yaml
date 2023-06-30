@@ -15,5 +15,5 @@ steer_mass: 1
 steer_stiffness: 350
 steer_damping: 20
 wheel_mass: 2
-wheel_damping: 10
-wheel_friction: 1
+wheel_damping: 100
+wheel_friction: 2
