@@ -80,6 +80,12 @@ def create_steer_joint(name, parent, child):
     joint.GetProperty('drive:angular:physics:damping').Set(steer_damping)
     joint.CreateAttribute('drive:angular:physics:targetPosition', Sdf.ValueTypeNames.Float).Set(0)
     PhysxSchema.JointStateAPI.Apply(joint.GetPrim(), "angular")
+    # rotate 180 degrees to match the model
+    rot_x_180 = Gf.Quatf(0, Gf.Vec3f(1, 0, 0))
+    r0 = joint.GetAttribute('physics:localRot0')
+    r1 = joint.GetAttribute('physics:localRot1')
+    r0.Set(r0.Get() * rot_x_180)
+    r1.Set(r1.Get() * rot_x_180)
     return joint
 
 joint_steer_left_front = create_steer_joint('joint_steer_left_front', chasis, steer_left_front)
