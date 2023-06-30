@@ -55,6 +55,11 @@ joint_wheel_left_front = stage.GetPrimAtPath(f'/{chasis_name}/joints/joint_wheel
 joint_wheel_left_back = stage.GetPrimAtPath(f'/{chasis_name}/joints/joint_wheel_left_back')
 joint_wheel_right_front = stage.GetPrimAtPath(f'/{chasis_name}/joints/joint_wheel_right_front')
 joint_wheel_right_back = stage.GetPrimAtPath(f'/{chasis_name}/joints/joint_wheel_right_back')
+wheel_joints = [joint_wheel_left_front, joint_wheel_left_back, joint_wheel_right_front, joint_wheel_right_back]
+steer_joints = [joint_steer_left_front, joint_steer_left_back, joint_steer_right_front, joint_steer_right_back]
+
+robot.GetAttribute('xformOp:translate').Set(Gf.Vec3d(0, 0, 0.5))
+# robot.GetAttribute('xformOp:orient').Set(Gf.Quatf(0, 1, 0, 0))
 
 def clamp(x, min, max):
     return min if x < min else max if x > max else x
@@ -88,39 +93,90 @@ class ModDerivative:
             diff -= self.mod
         return diff / dt
 
-wheel_speed_controllers = [PIDController(0.5, 1, 0, -720, 720) for _ in range(4)]
+class SpeedLimiter:
+    def __init__(self, max_speed):
+        self.max_speed = max_speed
+
+    def step(self, current, target, dt):
+        diff = target - current
+        if diff > self.max_speed * dt:
+            return current + self.max_speed * dt
+        elif diff < -self.max_speed * dt:
+            return current - self.max_speed * dt
+        else:
+            return target
+
+
+def square_wave(t, min, max, duration):
+    t = t % duration
+    if t < duration / 2:
+        return min
+    else:
+        return max
+
+def triangle_wave(t, min, max, duration):
+    t = t % duration
+    if t < duration / 2:
+        return min + (max - min) / (duration / 2) * t
+    else:
+        return max - (max - min) / (duration / 2) * (t - duration / 2)
+
+def sin_wave(t, min, max, duration):
+    t = t % duration
+    return min + (max - min) / 2 * (1 + np.sin(2 * np.pi * t / duration))
+
+wheel_speed_controllers = [PIDController(0.75, 1.25, 0, -1440, 1440) for _ in range(4)]
 wheel_speed_measurers = [ModDerivative(360) for _ in range(4)]
+steer_position_controllers = [SpeedLimiter(400) for _ in range(4)]
 global_time = 0
 
 rospy.init_node('controller', anonymous=True)
-wheel_position_pubs = [rospy.Publisher('wheel_left_front_position', Float64, queue_size=10),
-                       rospy.Publisher('wheel_left_back_position', Float64, queue_size=10),
-                       rospy.Publisher('wheel_right_front_position', Float64, queue_size=10),
-                       rospy.Publisher('wheel_right_back_position', Float64, queue_size=10)]
-
 wheel_speed_pubs = [rospy.Publisher('wheel_left_front_speed', Float64, queue_size=10),
                     rospy.Publisher('wheel_left_back_speed', Float64, queue_size=10),
                     rospy.Publisher('wheel_right_front_speed', Float64, queue_size=10),
                     rospy.Publisher('wheel_right_back_speed', Float64, queue_size=10)]
 
+wheel_target_speed_pubs = [rospy.Publisher('wheel_left_front_target_speed', Float64, queue_size=10),
+                            rospy.Publisher('wheel_left_back_target_speed', Float64, queue_size=10),
+                            rospy.Publisher('wheel_right_front_target_speed', Float64, queue_size=10),
+                            rospy.Publisher('wheel_right_back_target_speed', Float64, queue_size=10)]
+
+steer_position_pubs = [rospy.Publisher('steer_left_front_position', Float64, queue_size=10),
+                        rospy.Publisher('steer_left_back_position', Float64, queue_size=10),
+                        rospy.Publisher('steer_right_front_position', Float64, queue_size=10),
+                        rospy.Publisher('steer_right_back_position', Float64, queue_size=10)]
+
+steer_target_position_pubs = [rospy.Publisher('steer_left_front_target_position', Float64, queue_size=10),
+                                rospy.Publisher('steer_left_back_target_position', Float64, queue_size=10),
+                                rospy.Publisher('steer_right_front_target_position', Float64, queue_size=10),
+                                rospy.Publisher('steer_right_back_target_position', Float64, queue_size=10)]
+
 
 def on_physics_step(step_size):
     global global_time
     global_time += step_size
-    if global_time // 5 % 2 == 0:
-        target_speed = 360
-    else:
-        target_speed = -360
-    wheel_joints = [joint_wheel_left_front, joint_wheel_left_back, joint_wheel_right_front, joint_wheel_right_back]
-    for wheel_joint, wheel_speed_controller, wheel_speed_measurer, wheel_position_pub, wheel_speed_pub \
-          in zip(wheel_joints, wheel_speed_controllers, wheel_speed_measurers, wheel_position_pubs, wheel_speed_pubs):
+    target_speed = square_wave(global_time, -860, 860, 20)
+    target_position = triangle_wave(global_time, -45, 45, 2)
+
+    for wheel_joint, wheel_speed_controller, wheel_speed_measurer, wheel_speed_pub, wheel_target_speed_pub \
+          in zip(wheel_joints, wheel_speed_controllers, wheel_speed_measurers, wheel_speed_pubs, wheel_target_speed_pubs):
         encoder_reading = wheel_joint.GetAttribute('state:angular:physics:position').Get()
         measure_speed = wheel_speed_measurer.step(encoder_reading, step_size)
         error = target_speed - measure_speed
         actuator = wheel_speed_controller.step(error, step_size)
         wheel_joint.GetAttribute('drive:angular:physics:targetVelocity').Set(actuator)
-        wheel_position_pub.publish(encoder_reading)
         wheel_speed_pub.publish(measure_speed)
+        wheel_target_speed_pub.publish(target_speed)
+    
+    for steer_joint, steer_position_controller, steer_position_pub, steer_target_position_pub \
+            in zip(steer_joints, steer_position_controllers, steer_position_pubs, steer_target_position_pubs):
+        encoder_reading = steer_joint.GetAttribute('state:angular:physics:position').Get()
+        actuator = steer_position_controller.step(encoder_reading, target_position, step_size)
+        steer_joint.GetAttribute('drive:angular:physics:targetPosition').Set(actuator)
+        steer_position_pub.publish(encoder_reading)
+        steer_target_position_pub.publish(target_position)
+    
+    
 
 world.add_physics_callback('controller', callback_fn=on_physics_step)
 world.reset()

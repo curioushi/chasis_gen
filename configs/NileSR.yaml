@@ -12,8 +12,8 @@ chasis_height: 0.850
 # physics
 chasis_mass: 1000
 steer_mass: 25
-steer_stiffness: 350
-steer_damping: 20
+steer_stiffness: 1000
+steer_damping: 10
 wheel_mass: 50
 wheel_damping: 100
 wheel_friction: 2
